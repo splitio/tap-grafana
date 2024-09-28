@@ -1,4 +1,4 @@
-# tap-sumologic
+# tap-grafana
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data
 following the [Singer
@@ -16,19 +16,19 @@ This tap:
 *config.json*
 ```json
 {
-    "sumologic_access_id": "ACCESS_ID",
-    "sumologic_access_key": "ACCESS_KEY",
-    "sumologic_root_url": "https://api.us2.sumologic.com/api",
+    "grafana_access_id": "ACCESS_ID",
+    "grafana_access_key": "ACCESS_KEY",
+    "grafana_root_url": "https://logs-prod-006.grafana.net/",
     "start_date": "2020-01-01T00:00:00",
     "end_date": "2020-01-05T00:00:00",
     "tables": [{
-        "query": "_sourceCategory=prod/fastly/sdk | _timeslice 1d as day | count by day, api_key",
+        "query": "count_over_time({service_name=\"fastly\"}",
         "table_name": "my_table",
         "max_lookback_days": 10, 
-        "time_property": ["day"] 
+        "interval": "1d 
     }]
 }
 ```
 
-max_lookback_days: by default is 7 days. Number of days it queries Sumologic back from today. Sumologic doesn't perform well when going to far back so use with caution.
-time_property: this is the field that has the time if any. It allows to track the last processed date. 
+max_lookback_days: by default is 7 days. Number of days it queries Grafana Loki back from today. 
+interval: this is the granularity you want the data to be structured by. It currently supports "1d" (1 day) or "1h" (1 hour)
