@@ -25,7 +25,7 @@ This tap:
         "query": "count_over_time({service_name=\"fastly\"}",
         "table_name": "my_table",
         "max_lookback_days": 10, 
-        "interval": "1d 
+        "interval": "1d"
     }]
 }
 ```
