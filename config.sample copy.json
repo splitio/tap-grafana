@@ -1,0 +1,13 @@
+{
+    "grafana_access_id": "ACCESS_ID",
+    "grafana_access_key": "ACCESS_KEY",
+    "grafana_root_url": "https://api.us2.sumologic.com/api",
+    "start_date": "2000-01-01T00:00:00",
+    "end_date": "2000-01-05T00:00:00",
+    "tables": [{
+        "query": "_sourceCategory=prod/fastly/sdk | count by api_key | lookup orgname from /shared/split/apikey_to_orgid_mapping on api_key=api_key| sum(_count) by  orgname| sort by _sum desc",
+        "table_name": "my_table",
+        "max_lookback_days": "30",
+        "time_property": "day"
+    }]
+}

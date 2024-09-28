@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Grafana Tap Discovery",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/.connectors/tap-grafana/.venv/tap-grafana/bin/tap-grafana",
+            "args": [
+                "--config",
+                "${workspaceRoot}/.connectors/tap-grafana/.secrets/config.json",
+                "--discover"
+            ],
+            "cwd": "${workspaceRoot}/.connectors/tap-grafana",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}/.connectors/tap-grafana/.venv/tap-grafana/bin/python:$PYTHONPATH"
+            }
+        },
+        {
+            "name": "Python: Grafana Tap Sync",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/.connectors/tap-grafana/.venv/tap-grafana/bin/tap-grafana",
+            "args": [
+                "--config",
+                "${workspaceRoot}/.connectors/tap-grafana/.secrets/config.json",
+                "--properties",
+                "${workspaceRoot}/.connectors/tap-grafana/.secrets/catalog2.json"
+            ],
+            "cwd": "${workspaceRoot}/.connectors/tap-grafana",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}/.connectors/tap-grafana/.venv/tap-grafana/bin/python:$PYTHONPATH"
+            }
+        }
+    ]
+}
