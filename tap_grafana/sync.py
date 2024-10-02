@@ -8,6 +8,9 @@ from singer import metadata, get_logger, Transformer, utils, get_bookmark, write
 from tap_grafana import grafana
 from datetime import datetime, timezone
 from dateutil.relativedelta import *
+import pytz
+
+utc=pytz.UTC
 
 LOGGER = get_logger()
 
@@ -41,7 +44,7 @@ def sync_stream(config: Dict, state: Dict, table_spec: Dict, stream: Dict) -> in
     elif interval == '1h':
         end_time = end_time.replace(minute=0, second=0, microsecond=0)
     
-    modified_since = datetime.strptime(modified_since_str, '%Y-%m-%dT%H:%M:%S')
+    modified_since = datetime.strptime(modified_since_str, '%Y-%m-%dT%H:%M:%S').replace(tzinfo=utc)
     max_lookback_date = (end_time + relativedelta(days=-max_lookback_days))
     from_time = modified_since if modified_since > max_lookback_date else max_lookback_date
     

@@ -99,7 +99,7 @@ def get_grafana_fields(config, query, from_time, to_time):
         fields.append({'name': 'time', 'fieldType': 'integer', 'keyField': True})
         for field in response[0]['metric']:
             fields.append({'name': field, 'fieldType': 'string', 'keyField': True})
-        fields.append({'name': 'value', 'fieldType': 'integer', 'keyField': True})
+        fields.append({'name': 'value', 'fieldType': 'integer', 'keyField': False})
 
     return fields
 
