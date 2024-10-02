@@ -152,7 +152,7 @@ def request_to_grafana(config, urlpath, params):
     encodedparams = urlencode(params)
     
     full_url = grafana_root_url + "/" + urlpath + "?" + encodedparams
-    print(full_url)
+    LOGGER.info("full_url: %s", full_url)
     r = requests.get(full_url, auth=(grafana_access_id,grafana_access_key))
     
     if r.status_code == 200:
