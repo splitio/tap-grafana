@@ -49,11 +49,12 @@ def get_schema_for_table(config: Dict, table_spec: Dict) -> Dict:
     schema = {}
     LOGGER.info('Getting records for query to determine table schema.')
 
-    q = table_spec.get('query') # TODO get query from config
+    q = table_spec.get('query') 
+    interval = table_spec.get('interval') 
     from_time = (datetime.now(timezone.utc) + relativedelta(minutes=-15)).strftime('%Y-%m-%dT%H:%M:%SZ')
     to_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    fields = get_grafana_fields(config, q, from_time, to_time)
+    fields = get_grafana_fields(config, q, interval, from_time, to_time)
 
     key_properties = []
     for field in fields:
@@ -83,7 +84,7 @@ def get_schema_for_table(config: Dict, table_spec: Dict) -> Dict:
         'key_properties': key_properties
     }
 
-def get_grafana_fields(config, query, from_time, to_time):
+def get_grafana_fields(config, query, interval, from_time, to_time):
     fields = []
     params = {}
     params['query'] = query
@@ -99,7 +100,8 @@ def get_grafana_fields(config, query, from_time, to_time):
         fields.append({'name': 'time', 'fieldType': 'integer', 'keyField': True})
         for field in response[0]['metric']:
             fields.append({'name': field, 'fieldType': 'string', 'keyField': True})
-        fields.append({'name': 'value', 'fieldType': 'string', 'keyField': False})
+        if interval:
+            fields.append({'name': 'value', 'fieldType': 'string', 'keyField': False})
 
     return fields
 
@@ -135,7 +137,8 @@ def get_grafana_records(config, query, interval, from_time, to_time):
             values = rec['values']
             for value in values:
                 record['time'] = value[0]
-                record['value'] = value[1]
+                if interval:
+                    record['value'] = value[1]
                 # extract the result maps to put them in the list of records
                 records.append({**record, **custom_columns})
 
