@@ -186,7 +186,7 @@ def get_grafana_records(config, query, interval, from_time, to_time):
                         record['value'] = value[1] or ''
                     # note latest timestamp
                     if resultType == 'streams':
-                        most_recent_time = value[0]
+                        most_recent_time = max(most_recent_time, value[0])
                     # extract the result maps to put them in the list of records
                     records.append({**record, **custom_columns})
 
