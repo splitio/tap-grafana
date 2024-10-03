@@ -130,7 +130,9 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     params = {}
     params['query'] = query
     if interval:
-        params['step'] = interval
+        params['step'] = interval # for matrix
+    else:
+        params['limit'] = "50000" # for streams
     params['start'] = from_time
     if to_time:
         params['end'] = to_time
