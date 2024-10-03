@@ -25,7 +25,8 @@ def sync_stream(config: Dict, state: Dict, table_spec: Dict, stream: Dict) -> in
     :return: count of streamed records
     """
     table_name = table_spec.get("table_name")
-    modified_since_str = get_bookmark(state, table_name, 'modified_since') or config['start_date']
+    modified_since_str = get_bookmark(state, table_name, 'modified_since')
+    start_date =  datetime.strptime(config['start_date'],  '%Y-%m-%dT%H:%M:%S').replace(tzinfo=utc)
     end_date = config.get('end_date')
     interval = table_spec.get('interval')
 
@@ -37,14 +38,16 @@ def sync_stream(config: Dict, state: Dict, table_spec: Dict, stream: Dict) -> in
     # if we do real time we would have gaps of data for the data that comes in later.
     end_time = datetime.now(timezone.utc) + relativedelta(minutes=-5)
     if end_date:
-        end_time = datetime.strptime(end_date, '%Y-%m-%dT%H:%M:%S')
+        end_time = datetime.strptime(end_date, '%Y-%m-%dT%H:%M:%S').replace(tzinfo=utc)
     
     if interval == '1d':
         end_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
     elif interval == '1h':
         end_time = end_time.replace(minute=0, second=0, microsecond=0)
     
-    modified_since = datetime.strptime(modified_since_str, '%Y-%m-%dT%H:%M:%S').replace(tzinfo=utc)
+    modified_since = start_date
+    if modified_since_str:
+        modified_since = datetime.fromtimestamp(eval(modified_since_str)/1000000000, timezone.utc)
     max_lookback_date = (end_time + relativedelta(days=-max_lookback_days))
     from_time = modified_since if modified_since > max_lookback_date else max_lookback_date
     
@@ -72,7 +75,10 @@ def sync_stream(config: Dict, state: Dict, table_spec: Dict, stream: Dict) -> in
     for record in records:
         # record biggest time property value to bookmark it
         if time_property:
-            max_time = max(max_time, record[time_property])
+            if type(record[time_property]) == str:
+                max_time = max(max_time, eval(record[time_property]))
+            else:
+                max_time = max(max_time, record[time_property])
 
         with Transformer() as transformer:
             to_write = transformer.transform(record, stream['schema'], metadata.to_map(stream['metadata']))
@@ -81,10 +87,9 @@ def sync_stream(config: Dict, state: Dict, table_spec: Dict, stream: Dict) -> in
         records_synced += 1
 
     if time_property:
-        end = datetime.fromtimestamp(int(max_time)/1000, timezone.utc)
-        state = write_bookmark(state, table_name, 'modified_since', end.strftime('%Y-%m-%dT%H:%M:%S'))
+        state = write_bookmark(state, table_name, 'modified_since', str(max_time))
         write_state(state)
-        LOGGER.info('Wrote state with modified_since=%s', end.strftime('%Y-%m-%dT%H:%M:%S'))
+        LOGGER.info('Wrote state with modified_since=%d', max_time)
 
     LOGGER.info('Wrote %s records for table "%s".', records_synced, table_name)
 

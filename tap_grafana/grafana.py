@@ -96,11 +96,23 @@ def get_grafana_fields(config, query, interval, from_time, to_time):
     response = request_to_grafana(config, "/loki/api/v1/query_range", params)
     if response:
         fields = []
+        
+        resultType = response['resultType']
+        # add all dimensions
+        dimensions = []
+        if resultType == 'matrix':
+            dimensions = response['result'][0]['metric']
+        elif resultType == 'streams':
+            dimensions = response['result'][0]['stream']
+        else:
+            raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
         # always have the time field for query_range
         fields.append({'name': 'time', 'fieldType': 'integer', 'keyField': True})
-        for field in response[0]['metric']:
+        
+        for field in dimensions:
             fields.append({'name': field, 'fieldType': 'string', 'keyField': True})
-        if interval:
+            
+        if resultType == 'matrix':
             fields.append({'name': 'value', 'fieldType': 'string', 'keyField': False})
 
     return fields
@@ -127,17 +139,26 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     response = request_to_grafana(config, "/loki/api/v1/query_range", params)
     count = 0
     if response:
-        for rec in response:
+        resultType = response['resultType']
+        for rec in response['result']:
             record = {}
+            
             # add all dimensions
-            dimensions = rec['metric']
+            dimensions = []
+            if resultType == 'matrix':
+                dimensions = rec['metric']
+            elif resultType == 'streams':
+                dimensions = rec['stream']
+            else:
+                raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
+                
             for dim in dimensions:
                 record[dim] = dimensions[dim]
             
             values = rec['values']
             for value in values:
                 record['time'] = value[0]
-                if interval:
+                if resultType == 'matrix':
                     record['value'] = value[1]
                 # extract the result maps to put them in the list of records
                 records.append({**record, **custom_columns})
@@ -161,8 +182,8 @@ def request_to_grafana(config, urlpath, params):
     
     if r.status_code == 200:
         response = json.loads(r.text)
-        if response['status'] == 'success' and response['data']['resultType'] == 'matrix':
-            return response['data']['result']
+        if response['status'] == 'success':
+            return response['data']
     
     return None
             
