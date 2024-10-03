@@ -132,11 +132,12 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     if interval:
         params['step'] = interval # for matrix
     else:
-        params['limit'] = "50000" # for streams
+        params['limit'] = "5000" # for streams
     params['start'] = from_time
     if to_time:
         params['end'] = to_time
 
+    # we need to loop as we get record 5000 a time for streams
     LOGGER.info("Run query in grafana: " + query + " with params: " + str(params))
     response = request_to_grafana(config, "/loki/api/v1/query_range", params)
     count = 0
