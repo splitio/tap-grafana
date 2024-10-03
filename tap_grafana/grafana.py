@@ -119,6 +119,7 @@ def get_grafana_fields(config, query, interval, from_time, to_time):
 
 def get_grafana_records(config, query, interval, from_time, to_time):
     records = []
+    count = 0
     
     now_datetime = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f')
     custom_columns = {
@@ -137,47 +138,70 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     if to_time:
         params['end'] = to_time
 
-    # we need to loop as we get record 5000 a time for streams
-    LOGGER.info("Run query in grafana: " + query + " with params: " + str(params))
-    response = request_to_grafana(config, "/loki/api/v1/query_range", params)
-    count = 0
-    if response:
-        resultType = response['resultType']
-        
-        fieldContainer = ''
-        if resultType == 'matrix':
-            fieldContainer = 'metric'
-        elif resultType == 'streams':
-            fieldContainer = 'stream'
-        else:
-            raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
-        
-        # record all the field to make sure we set them to empty string when they don't exist in a record    
-        fields = list(response['result'][0][fieldContainer].keys())
-        
-        for rec in response['result']:
-            record = {}
-            
-            new_fields = list(set(rec[fieldContainer].keys()) - set(fields))
-            # add new fields to list and back field previous records with an empty string
-            # this is for the case where the first few records don't have all the fields
-            for new_field in new_fields:
-                fields.append(new_field)
-                for r in records:
-                    r[new_field] = ''
-                
-            for field in fields:
-                record[field] = rec[fieldContainer].get(field) or ''
-            
-            values = rec['values']
-            for value in values:
-                record['time'] = value[0]
-                if resultType == 'matrix':
-                    record['value'] = value[1] or ''
-                # extract the result maps to put them in the list of records
-                records.append({**record, **custom_columns})
+    
+    # TODO we need to loop as we get record 5000 a time for streams
+    continue_loop = True
+    most_recent_time = from_time
 
-                count = count + 1
+    while continue_loop:
+        continue_loop = False # by default exit the loop
+        
+        LOGGER.info("Run query in grafana: " + query + " with params: " + str(params))
+        response = request_to_grafana(config, "/loki/api/v1/query_range", params)
+        new_count = 0
+        
+        if response:
+            resultType = response['resultType']
+            
+            fieldContainer = ''
+            if resultType == 'matrix':
+                fieldContainer = 'metric'
+            elif resultType == 'streams':
+                fieldContainer = 'stream'
+            else:
+                raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
+            
+            # record all the fields to make sure we set them to empty string when they don't exist in a record    
+            fields = list(response['result'][0][fieldContainer].keys())
+            
+            for rec in response['result']:
+                record = {}
+                
+                new_fields = list(set(rec[fieldContainer].keys()) - set(fields))
+                # add new fields to list and back field previous records with an empty string
+                # this is for the case where the first few records don't have all the fields
+                for new_field in new_fields:
+                    fields.append(new_field)
+                    for r in records:
+                        r[new_field] = ''
+                    
+                for field in fields:
+                    record[field] = rec[fieldContainer].get(field) or ''
+                
+                values = rec['values']
+                for value in values:
+                    record['time'] = value[0]
+                    if resultType == 'matrix':
+                        record['value'] = value[1] or ''
+                    # note latest timestamp
+                    if resultType == 'streams':
+                        most_recent_time = value[0]
+                    # extract the result maps to put them in the list of records
+                    records.append({**record, **custom_columns})
+
+                    count = count + 1
+                    new_count = new_count + 1
+        else:
+            break # if response has an error exit the loop
+
+        # if we got the max number of records for a stream then loop again to get the rest
+        if resultType == 'streams' and new_count == 5000:
+            continue_loop = True
+            # move the cursor
+            params['start'] = most_recent_time
+            
+        LOGGER.info("Got %d new records.", new_count)
+    # end while loop
 
     LOGGER.info("Got %d records.", count)
     return records
