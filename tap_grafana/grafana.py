@@ -142,20 +142,31 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     count = 0
     if response:
         resultType = response['resultType']
+        
+        fieldContainer = ''
+        if resultType == 'matrix':
+            fieldContainer = 'metric'
+        elif resultType == 'streams':
+            fieldContainer = 'stream'
+        else:
+            raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
+        
+        # record all the field to make sure we set them to empty string when they don't exist in a record    
+        fields = list(response['result'][0][fieldContainer].keys())
+        
         for rec in response['result']:
             record = {}
             
-            # add all dimensions
-            dimensions = []
-            if resultType == 'matrix':
-                dimensions = rec['metric']
-            elif resultType == 'streams':
-                dimensions = rec['stream']
-            else:
-                raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
+            new_fields = list(set(rec[fieldContainer].keys()) - set(fields))
+            # add new fields to list and back field previous records with an empty string
+            # this is for the case where the first few records don't have all the fields
+            for new_field in new_fields:
+                fields.append(new_field)
+                for r in records:
+                    r[new_field] = ''
                 
-            for dim in dimensions:
-                record[dim] = dimensions[dim] or ''
+            for field in fields:
+                record[field] = rec[fieldContainer].get(field) or ''
             
             values = rec['values']
             for value in values:
