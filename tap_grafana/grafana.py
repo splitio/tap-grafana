@@ -155,13 +155,13 @@ def get_grafana_records(config, query, interval, from_time, to_time):
                 raise Exception("Unknown resultType received from Grafana (only matrix and streams are supported): "+ resultType)
                 
             for dim in dimensions:
-                record[dim] = dimensions[dim]
+                record[dim] = dimensions[dim] or ''
             
             values = rec['values']
             for value in values:
                 record['time'] = value[0]
                 if resultType == 'matrix':
-                    record['value'] = value[1]
+                    record['value'] = value[1] or ''
                 # extract the result maps to put them in the list of records
                 records.append({**record, **custom_columns})
 
