@@ -142,7 +142,7 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     
     # TODO we need to loop as we get record 5000 a time for streams
     continue_loop = True
-    most_recent_time = from_time
+    most_recent_time = 0
 
     while continue_loop:
         continue_loop = False # by default exit the loop
@@ -186,7 +186,7 @@ def get_grafana_records(config, query, interval, from_time, to_time):
                         record['value'] = value[1] or ''
                     # note latest timestamp
                     if resultType == 'streams':
-                        most_recent_time = max(most_recent_time, value[0])
+                        most_recent_time = max(most_recent_time, eval(value[0]))
                     # extract the result maps to put them in the list of records
                     records.append({**record, **custom_columns})
 
@@ -199,8 +199,9 @@ def get_grafana_records(config, query, interval, from_time, to_time):
         if resultType == 'streams' and new_count == 5000:
             continue_loop = True
             # move the cursor
-            params['start'] = most_recent_time
+            params['start'] = str(most_recent_time)
             
+        LOGGER.info("most recent time: %s", datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'))
         LOGGER.info("Got %d new records.", new_count)
     # end while loop
 
