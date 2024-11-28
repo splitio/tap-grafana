@@ -193,16 +193,19 @@ def get_grafana_records(config, query, interval, from_time, to_time):
                     count = count + 1
                     new_count = new_count + 1
         else:
-            break # if response has an error exit the loop
+            LOGGER.info("Response is with error. Returning %d records.", count)
+            return records # if response has an error exit the loop
+
+        LOGGER.info("most recent time: %s", datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'))
+        LOGGER.info("Got %d new records.", new_count)
 
         # if we got the max number of records for a stream then loop again to get the rest
         if resultType == 'streams' and new_count == 5000:
             continue_loop = True
             # move the cursor
             params['start'] = str(most_recent_time)
+            resultType = '' # reset value to not loop on error
             
-        LOGGER.info("most recent time: %s", datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'))
-        LOGGER.info("Got %d new records.", new_count)
     # end while loop
 
     LOGGER.info("Got %d records.", count)
