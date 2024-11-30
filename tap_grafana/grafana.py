@@ -138,7 +138,6 @@ def get_grafana_records(config, query, interval, from_time, to_time):
     params['start'] = from_time
     if to_time:
         params['end'] = to_time
-
     
     # TODO we need to loop as we get record 5000 a time for streams
     continue_loop = True
@@ -150,6 +149,7 @@ def get_grafana_records(config, query, interval, from_time, to_time):
         LOGGER.info("Run query in grafana: " + query + " with params: " + str(params))
         response = request_to_grafana(config, "/loki/api/v1/query_range", params)
         new_count = 0
+        resultType = ''
         
         if response:
             resultType = response['resultType']
@@ -196,15 +196,15 @@ def get_grafana_records(config, query, interval, from_time, to_time):
             LOGGER.info("Response is with error. Returning %d records.", count)
             return records # if response has an error exit the loop
 
-        LOGGER.info("most recent time: %s", datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'))
+        most_recent_time_str = datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).max_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')
+        LOGGER.info("most recent time: %s - end time: %s", most_recent_time_str, to_time)
         LOGGER.info("Got %d new records.", new_count)
 
         # if we got the max number of records for a stream then loop again to get the rest
-        if resultType == 'streams' and new_count == 5000:
+        if resultType == 'streams' and new_count == 5000 and most_recent_time_str < to_time:
             continue_loop = True
             # move the cursor
             params['start'] = str(most_recent_time)
-            resultType = '' # reset value to not loop on error
             
     # end while loop
 
@@ -227,6 +227,8 @@ def request_to_grafana(config, urlpath, params):
         response = json.loads(r.text)
         if response['status'] == 'success':
             return response['data']
-    
+    else:
+        LOGGER.warn("request urlpath=%s returned %d", urlpath, r.status_code)
+
     return None
             
