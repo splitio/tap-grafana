@@ -196,7 +196,7 @@ def get_grafana_records(config, query, interval, from_time, to_time):
             LOGGER.info("Response is with error. Returning %d records.", count)
             return records # if response has an error exit the loop
 
-        most_recent_time_str = datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).max_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')
+        most_recent_time_str = datetime.fromtimestamp(most_recent_time/1000000000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f')
         LOGGER.info("most recent time: %s - end time: %s", most_recent_time_str, to_time)
         LOGGER.info("Got %d new records.", new_count)
 
